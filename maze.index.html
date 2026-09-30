@@ -1,0 +1,109 @@
+<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>移動迷宮練習</title><style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f4f6fb;--fg:#1c2340;--card:#fff;--cell:#d9d6dc;--mut:#6b7390;--pri:#1f5fd6}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#12162a;--fg:#eef1ff;--card:#1e2440;--cell:#3a3f5c;--mut:#9aa3c7}}
+:root[data-theme=dark]{--bg:#12162a;--fg:#eef1ff;--card:#1e2440;--cell:#3a3f5c;--mut:#9aa3c7}
+*{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}html,body{touch-action:none;overscroll-behavior:none}@media (pointer:coarse){.dpad{display:none}}body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"PingFang TC","Noto Sans TC",sans-serif;display:flex;justify-content:center}
+#app{width:100%;max-width:440px;padding:14px}
+.top{display:flex;gap:8px;justify-content:space-between;font-weight:700;font-size:14px}.chip{background:var(--card);padding:6px 10px;border-radius:12px}
+.bar{height:8px;background:var(--cell);border-radius:8px;margin:10px 0;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#ffb400,#ff5d8f);width:0;transition:.4s}
+h1{font-size:18px;margin:6px 0}.hint{font-size:13px;color:var(--mut);line-height:1.5}
+#board{position:relative;margin:12px auto;background:var(--cell);border-radius:10px;touch-action:none}
+.cell{position:absolute;border:1px solid rgba(255,255,255,.55)}
+.exit{position:absolute;border-radius:50%;background:#000}
+.p{position:absolute;border-radius:12px;transition:left .18s,top .18s,outline .1s;cursor:pointer}
+.p.ball{border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff8a95,#e5142a)}
+.p.w{background:repeating-linear-gradient(45deg,#a9a8ae 0 6px,#c4c3c8 6px 12px);cursor:default;border:2px solid #8e8d94}
+.p.sel{outline:4px solid #fff;box-shadow:0 0 0 7px var(--pri)}
+.row{display:flex;gap:8px;justify-content:center;align-items:center;margin:8px 0;flex-wrap:wrap}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:11px 16px;background:var(--pri);color:#fff;cursor:pointer}
+button.g{background:var(--card);color:var(--fg)}button.ok{background:#16a34a}
+.dpad{display:grid;grid-template-columns:repeat(3,54px);gap:6px;justify-content:center}.dpad button{padding:10px;font-size:20px}
+#msg{text-align:center;min-height:22px;font-weight:700}
+#res{background:var(--card);border-radius:16px;padding:12px;text-align:center;display:none}
+#home{position:fixed;inset:0;background:var(--bg);z-index:7;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px}#home button{display:block;width:250px;margin:8px auto}#bar{position:fixed;left:0;right:0;bottom:0;margin:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);z-index:3;border-top:1px solid var(--cell)}body.lose #bar{display:none}#app{padding-bottom:84px}#res{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:440px;z-index:4;border-radius:16px 16px 0 0;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}#ov{position:fixed;inset:0;background:rgba(10,14,40,.6);display:none;align-items:center;justify-content:center;z-index:5}
+#pop{background:var(--card);border-radius:22px;padding:26px;text-align:center;animation:pp .4s}
+@keyframes pp{from{transform:scale(.5);opacity:0}}
+.cf{position:fixed;top:-30px;font-size:26px;animation:fall 2s linear forwards;z-index:6;pointer-events:none}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
+</style></head><body><div id="app">
+<div class="top"><span class="chip" id="lv"></span><span class="chip" id="st"></span><span class="chip" id="sc"></span></div>
+<div class="bar"><i id="pg"></i></div>
+<div id="board"></div>
+<div class="row"><span class="chip">步數：<b id="mv">0</b></span><span class="chip" id="tier"></span></div>
+<div class="dpad"><span></span><button class="g" data-d="0">↑</button><span></span><button class="g" data-d="2">←</button><button class="g" data-d="1">↓</button><button class="g" data-d="3">→</button></div>
+<div class="row" id="bar"><button class="g" id="undo">↩︎ 復原</button><button class="g" id="rst">🔄 重置</button><button id="hm">🏠 主畫面</button></div>
+<div id="msg"></div><div id="res"></div></div>
+<div id="home"><div><div style="font-size:44px">🧩</div><h1 style="font-size:24px;margin:4px">移動迷宮練習</h1><p class="hint" id="hs">把紅球用最少步數移到黑洞<br>從簡單一路挑戰到大師！</p><div class="hint" style="text-align:left;max-width:310px;margin:10px auto 16px;line-height:1.7">🎯 把 🔴 紅球移到 ⚫ 黑洞，並用<b>最少步數</b>過關（每移一格＝1 步）<br>🚫 灰色障礙物不能移動<br>✅ 紅球一碰到黑洞就自動判定答案<br>⌨️ 電腦：<b>Enter</b> 切換方塊、方向鍵移動、Z 復原<br>📱 手機：<b>輕點畫面任意處</b>依序切換方塊，在畫面任意處上下左右滑動即可移動</div><button class="ok" id="cont" style="display:none">▶ 繼續遊戲</button><button id="new">🌱 從簡單開始</button><button id="mid" style="background:#e8590c">🔥 從中間難度開始</button></div></div>
+<div id="ov"><div id="pop"></div></div>
+<script>
+const D=[[0,-1],[0,1],[-1,0],[1,0]],COL=['#ffc233','#1ab3ff','#16a34a','#b91f86','#6b2a8a','#f01b2d','#7cb800'];
+// [W,H,blocks,walls,minMoves,maxMoves]
+const CFG=[[3,4,1,0,2,4],[3,4,2,0,3,5],[3,5,3,1,4,6],[3,5,4,1,5,8],[4,5,4,2,6,9],[4,5,5,2,7,11],[4,6,5,3,8,12],[5,6,6,3,9,14],[5,6,6,4,10,16],[5,7,7,4,11,18]];
+const TIER=['🌱 入門','🌱 入門','🌿 簡單','🌿 簡單','🍀 中等','🍀 中等','🔥 困難','🔥 困難','💎 專家','👑 大師'];
+let acc=0,ts=0,n=0,score=0,streak=0,L,pos,sel=0,moves=0,hist=[],sol,els=[],C,busy=0;
+const $=s=>document.querySelector(s);
+function occ(pcs,s,W,H){const g=new Int16Array(W*H).fill(-1);pcs.forEach((p,i)=>{for(let a=0;a<p.w;a++)for(let b=0;b<p.h;b++)g[(s[2*i+1]+b)*W+s[2*i]+a]=i});return g}
+function can(L,s,g,i,d){const p=L.pcs[i],x=s[2*i]+D[d][0],y=s[2*i+1]+D[d][1];if(x<0||y<0||x+p.w>L.W||y+p.h>L.H)return 0;for(let a=0;a<p.w;a++)for(let b=0;b<p.h;b++){const v=g[(y+b)*L.W+x+a];if(v!=-1&&v!=i)return 0}return 1}
+function solve(L){const st=L.pcs.flatMap(p=>[p.x,p.y]),seen=new Map([[st.join(),0]]),q=[st];let qi=0;
+while(qi<q.length){const s=q[qi++];if(s[0]==L.ex&&s[1]==L.ey){const r=[];let k=s.join(),e;while(e=seen.get(k)){r.push(e.m);k=e.p}return r.reverse()}
+if(seen.size>50000)return null;const g=occ(L.pcs,s,L.W,L.H),sk=s.join();
+for(let i=0;i<L.pcs.length;i++){if(L.pcs[i].k=='w')continue;for(let d=0;d<4;d++){if(!can(L,s,g,i,d))continue;const t=s.slice();t[2*i]+=D[d][0];t[2*i+1]+=D[d][1];const k=t.join();if(!seen.has(k)){seen.set(k,{p:sk,m:[i,d]});q.push(t)}}}}return null}
+const R=m=>Math.floor(Math.random()*m);
+function gen(c){const [W,H,nb,nw,mn,mx]=c;let best=null,bd=1e9;const t0=Date.now();
+while(Date.now()-t0<1800){const pcs=[],g=new Uint8Array(W*H);
+const put=(w,h,k)=>{for(let t=0;t<40;t++){const x=R(W-w+1),y=R(H-h+1);let ok=1;for(let a=0;a<w;a++)for(let b=0;b<h;b++)if(g[(y+b)*W+x+a])ok=0;if(ok){for(let a=0;a<w;a++)for(let b=0;b<h;b++)g[(y+b)*W+x+a]=1;pcs.push({w,h,x,y,k});return 1}}return 0};
+if(!put(1,1,'b'))continue;
+for(let i=0;i<nw;i++)put(1,1,'w');
+const SZ=[[1,1],[1,1],[1,2],[2,1],[1,2],[2,1],[2,2]];
+for(let i=0;i<nb;i++){const z=SZ[R(SZ.length)];put(z[0],z[1],'m')}
+const ex=R(W),ey=R(H);if(ex==pcs[0].x&&ey==pcs[0].y)continue;
+const Lx={W,H,ex,ey,pcs},s=solve(Lx);if(!s)continue;
+const d=s.length<mn?mn-s.length:s.length>mx?s.length-mx:0;
+if(d<bd){bd=d;best={...Lx,sol:s}}if(d==0)break}
+return best||gen(c)}
+function load(){document.body.classList.remove('lose');busy=1;$('#msg').textContent='⏳ 產生題目中…';$('#res').style.display='none';
+setTimeout(()=>{const c=CFG[Math.min(n,9)].slice();if(n>9){c[4]+=n-9;c[5]+=n-9}L=gen(c);sol=L.sol;pos=L.pcs.flatMap(p=>[p.x,p.y]);moves=0;hist=[];sel=0;busy=0;acc=0;ts=Date.now();build();$('#msg').textContent=''},30)}
+function build(){const b=$('#board'),W=L.W,H=L.H;C=Math.max(30,Math.min(72,Math.floor((Math.min(innerWidth,440)-50)/W),Math.floor((innerHeight-(matchMedia('(pointer:coarse)').matches?320:440))/H)));
+b.style.width=W*C+'px';b.style.height=H*C+'px';b.innerHTML='';
+for(let x=0;x<W;x++)for(let y=0;y<H;y++){const c=document.createElement('div');c.className='cell';c.style.cssText=`left:${x*C}px;top:${y*C}px;width:${C}px;height:${C}px`;b.append(c)}
+const e=document.createElement('div');e.className='exit';e.style.cssText=`left:${L.ex*C+3}px;top:${L.ey*C+3}px;width:${C-6}px;height:${C-6}px`;b.append(e);
+els=L.pcs.map((p,i)=>{const d=document.createElement('div');d.className='p '+(p.k=='b'?'ball':p.k=='w'?'w':'');if(p.k=='m')d.style.background=COL[(i*3+n)%COL.length];
+const ball=p.k=='b',f=ball?.6*C:null,w=ball?f:(p.w*C-8)*.8,h=ball?f:(p.h*C-8)*.8;d.style.width=w+'px';d.style.height=h+'px';d._ox=(p.w*C-w)/2;d._oy=(p.h*C-h)/2;d._i=i;b.append(d);return d});render()}
+function render(){els.forEach((d,i)=>{d.style.left=pos[2*i]*C+d._ox+'px';d.style.top=pos[2*i+1]*C+d._oy+'px';d.classList.toggle('sel',i==sel&&L.pcs[i].k!='w')});$('#mv').textContent=moves;
+$('#lv').textContent='Lv '+(n+1);$('#st').textContent='🔥 連勝 '+streak;$('#sc').textContent='⭐ '+score;$('#pg').style.width=Math.min(100,(n/10)*100)+'%';$('#tier').textContent=TIER[Math.min(n,9)]}
+function mv(d,rec=1){if(busy||$('#res').style.display=='block'&&rec)return;const g=occ(L.pcs,pos,L.W,L.H);if(L.pcs[sel].k=='w'||!can(L,pos,g,sel,d)){$('#msg').textContent='🚫 這個方向走不了';return}
+if(rec)hist.push([pos.slice(),moves]);pos[2*sel]+=D[d][0];pos[2*sel+1]+=D[d][1];moves++;$('#msg').textContent='';render();if(rec&&pos[0]==L.ex&&pos[1]==L.ey){busy=1;setTimeout(check,300)}}
+let gx=null,gy,gt;
+addEventListener('pointerdown',e=>{gx=e.clientX;gy=e.clientY;gt=e.target});
+addEventListener('pointerup',e=>{if(gx==null)return;const dx=e.clientX-gx,dy=e.clientY-gy,ad=Math.max(Math.abs(dx),Math.abs(dy)),t=gt;gx=null;
+if(!L||$('#home').style.display=='flex'||$('#ov').style.display=='flex'||(t.closest&&t.closest('button')))return;
+if(ad<12){if(!busy){const p=t.closest&&t.closest('.p');if(p&&p._i!=null&&L.pcs[p._i].k!='w'){sel=p._i;render();return}const l=L.pcs.map((p,i)=>i).filter(i=>L.pcs[i].k!='w');sel=l[(l.indexOf(sel)+1)%l.length];render()}}
+else if(ad>=20)mv(Math.abs(dx)>Math.abs(dy)?(dx>0?3:2):(dy>0?1:0))});
+addEventListener('contextmenu',e=>e.preventDefault());addEventListener('selectstart',e=>e.preventDefault());
+document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>mv(+b.dataset.d));
+addEventListener('keydown',e=>{const hm=$('#home').style.display=='flex';
+if(e.key=='Enter'){e.preventDefault();if(hm)($('#cont').style.display=='block'?$('#cont'):$('#new')).click();else if($('#ov').style.display=='flex')next();else if($('#res').style.display=='block')$('#nx2').click();else if(!busy&&L){const l=L.pcs.map((p,i)=>i).filter(i=>L.pcs[i].k!='w');sel=l[(l.indexOf(sel)+1)%l.length];render()}return}
+if(hm){e.preventDefault();return}
+if((e.key=='r'||e.key=='R')&&$('#res').style.display=='block'){$('#ag').click();return}
+if((e.key=='z'||e.key=='Z'))$('#undo').click();const k={ArrowUp:0,ArrowDown:1,ArrowLeft:2,ArrowRight:3}[e.key];if(k!=null){e.preventDefault();mv(k)}});
+$('#undo').onclick=()=>{if(busy||!hist.length)return;[pos,moves]=hist.pop();render()};
+function reset(){document.body.classList.remove('lose');busy=0;pos=L.pcs.flatMap(p=>[p.x,p.y]);moves=0;hist=[];sel=0;$('#res').style.display='none';$('#msg').textContent='';render()}
+$('#rst').onclick=reset;
+function confetti(){for(let i=0;i<45;i++){const s=document.createElement('span');s.className='cf';s.textContent=['🎉','⭐','✨','🎊'][R(4)];s.style.left=R(100)+'vw';s.style.animationDelay=Math.random()*.6+'s';document.body.append(s);setTimeout(()=>s.remove(),3000)}}
+function next(){clearTimeout(window.wt);$('#ov').style.display='none';n++;load()}
+function check(){const opt=sol.length,tt=Math.round((acc+Date.now()-ts)/1000),tm=Math.floor(tt/60)+':'+String(tt%60).padStart(2,'0');
+if(moves<=opt){streak++;const gain=100+streak*20;score+=gain;render();confetti();
+$('#pop').innerHTML=`<div style="font-size:54px">🎉</div><h2>答對了！恭喜通關</h2><p>最短路徑 ${opt} 步 ✅　⏱ 用時 ${tm}<br>⭐⭐⭐ +${gain} 分　🔥 連勝 ${streak}</p><p class="hint">👆 輕觸螢幕或按 Enter 進入下一關</p>`;window.wshow=Date.now();$('#ov').style.display='flex'}
+else{streak=0;render();busy=1;const r=$('#res');r.style.display='block';document.body.classList.add('lose');
+r.innerHTML=`<b>😮 你用了 ${moves} 步，最短只要 ${opt} 步</b><div class="hint" id="rp">▶ 示範最短解法中…</div><div class="row"><button class="g" id="ag">🔁 再玩一次</button><button id="nx2">下一題 ➜</button></div>`;
+$('#ag').onclick=reset;$('#nx2').onclick=()=>{busy=0;r.style.display='none';n++;load()};
+pos=L.pcs.flatMap(p=>[p.x,p.y]);moves=0;render();let i=0;clearInterval(window.iv);const iv=window.iv=setInterval(()=>{if(i>=sol.length){clearInterval(iv);$('#rp')&&($('#rp').textContent='✅ 示範完畢：最短路徑 '+opt+' 步');return}
+const [pi,d]=sol[i++];sel=pi;busy=0;mv(d,0);busy=1;if($('#rp'))$('#rp').textContent=`第 ${i}/${opt} 步：${'上下左右'[d]}移`},600)}}
+addEventListener('resize',()=>{if(L)build()});
+let best=0;
+function showHome(){best=Math.max(best,streak);$('#hs').innerHTML=L?`目前：第 ${n+1} 關　⭐ ${score} 分<br>🔥 最高連勝 ${best}`:'把紅球用最少步數移到黑洞<br>從簡單一路挑戰到大師！';$('#cont').style.display=L?'block':'none';$('#home').style.display='flex'}
+$('#ov').onclick=()=>{if(Date.now()-window.wshow>500)next()};
+$('#hm').onclick=()=>{acc+=Date.now()-ts;clearInterval(window.iv);clearTimeout(window.wt);const w=$('#ov').style.display=='flex';$('#ov').style.display='none';if(w){n++;load()}if(busy&&$('#res').style.display=='block'){reset()}showHome()};
+$('#cont').onclick=()=>{ts=Date.now();$('#home').style.display='none'};
+const startAt=k=>{best=Math.max(best,streak);n=k;score=0;streak=0;$('#ov').style.display='none';$('#home').style.display='none';load()};$('#new').onclick=()=>startAt(0);$('#mid').onclick=()=>startAt(4);
+</script></body></html>
